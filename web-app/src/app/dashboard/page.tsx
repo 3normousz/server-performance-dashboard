@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { AppSidebar } from "../../components/app-sidebar";
 import { ChartAreaInteractive } from "../../components/chart-area-interactive";
 import { DataTable } from "../../components/data-table";
@@ -5,42 +8,26 @@ import { SectionCards } from "../../components/section-cards";
 import { SiteHeader } from "../../components/site-header";
 import { SidebarInset, SidebarProvider } from "../../components/ui/sidebar";
 import { ChartDataPoint } from "../types/chart";
+import { fetchMetrics } from "../utils/fetchMetrics";
 
 import data from "./data.json";
+import { consoleLogger } from "@influxdata/influxdb-client";
 
 export default function Page() {
 
-  const cpuChartData: ChartDataPoint[] = [
-    { date: "2024-09-01T00:00:00", cpu: 10 },
-    { date: "2024-09-01T00:00:05", cpu: 15 },
-    { date: "2024-09-01T00:00:10", cpu: 12 },
-    { date: "2024-09-01T00:00:15", cpu: 30 },
-    { date: "2024-09-01T00:00:20", cpu: 25 },
-    { date: "2024-09-01T00:00:25", cpu: 40 },
-    { date: "2024-09-01T00:00:30", cpu: 35 },
-    { date: "2024-09-01T00:00:35", cpu: 60 },
-    { date: "2024-09-01T00:00:40", cpu: 55 },
-    { date: "2024-09-01T00:00:45", cpu: 70 },
-    { date: "2024-09-01T00:00:50", cpu: 65 },
-    { date: "2024-09-01T00:00:55", cpu: 50 },
-    { date: "2024-09-01T00:01:00", cpu: 10 },
-    { date: "2024-09-01T00:01:05", cpu: 15 },
-    { date: "2024-09-01T00:01:10", cpu: 12 },
-    { date: "2024-09-01T00:01:15", cpu: 30 },
-    { date: "2024-09-01T00:01:20", cpu: 25 },
-    { date: "2024-09-01T00:01:25", cpu: 40 },
-    { date: "2024-09-01T00:01:30", cpu: 35 },
-    { date: "2024-09-01T00:01:35", cpu: 60 },
-    { date: "2024-09-01T00:01:40", cpu: 55 },
-    { date: "2024-09-01T00:01:45", cpu: 70 },
-    { date: "2024-09-01T00:01:50", cpu: 65 },
-    { date: "2024-09-01T00:01:55", cpu: 50 },
-  ];
+  const [cpuChartData, setCpuChartData] = useState<ChartDataPoint[]>([]);
+  const [memoryChartData, setMemoryChartData] = useState<ChartDataPoint[]>([]);
+  const [diskChartData, setDiskChartData] = useState<ChartDataPoint[]>([]);
+  
+  useEffect(() => {
+    fetchMetrics("cpu", "usage_active").then((data) => setCpuChartData(data));
+    fetchMetrics("mem", "used_percent").then((data) => setMemoryChartData(data));
+  }, []);
 
   const config = {
     cpu: { label: "CPU", color: "var(--primary)" },
-    memory: { label: "Memory", color: "var(--secondary)" },
-    disk: { label: "Disk", color: "var(--tertiary)" },
+    memory: { label: "Memory", color: "var(--primary)" },
+    disk: { label: "Disk", color: "var(--primary)" },
   };
 
   return (
@@ -66,7 +53,7 @@ export default function Page() {
                   resourceKey="cpu"
                 />
                 <ChartAreaInteractive
-                  chartData={cpuChartData}
+                  chartData={memoryChartData}
                   chartConfig={config}
                   resourceKey="memory"
                 />
@@ -75,7 +62,6 @@ export default function Page() {
                   chartConfig={config}
                   resourceKey="disk"
                 />
-                ;
               </div>
               <DataTable data={data} />
             </div>

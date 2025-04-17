@@ -60,6 +60,11 @@ export function ChartAreaInteractive({
     return date >= startDate;
   });
 
+  const mappedData = chartData.map((item) => ({
+    date: item.date,
+    [resourceKey]: item.value,
+  }));
+
   return (
     <Card className="@container/card">
       <CardHeader>
@@ -99,7 +104,7 @@ export function ChartAreaInteractive({
           config={chartConfig}
           className="aspect-auto h-[250px] w-full"
         >
-          <AreaChart data={filteredData}>
+          <AreaChart data={mappedData}>
             <defs>
               {Object.keys(chartConfig).map((key) => (
                 <linearGradient
