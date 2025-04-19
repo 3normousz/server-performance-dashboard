@@ -1,6 +1,9 @@
 export type ChartDataPoint = {
   date: string;
-} & { [key: string]: number | string };
+  value: number;
+  device?: string;
+  [key: string]: number | string | undefined;
+};
 
 export type ChartConfig = {
   [key: string]: {

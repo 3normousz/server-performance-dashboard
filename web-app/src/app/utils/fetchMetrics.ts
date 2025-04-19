@@ -10,6 +10,7 @@ export async function fetchMetrics(measurement: string, field: string) {
       return data.map((point: any) => ({
         date: point._time,
         value: point._value,
+        device: point.device,
       }));
     } catch (err) {
       console.error("Fetch error:", err);

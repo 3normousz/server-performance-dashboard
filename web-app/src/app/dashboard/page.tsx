@@ -11,7 +11,6 @@ import { ChartDataPoint } from "../types/chart";
 import { fetchMetrics } from "../utils/fetchMetrics";
 
 import data from "./data.json";
-import { consoleLogger } from "@influxdata/influxdb-client";
 
 export default function Page() {
 
@@ -22,7 +21,12 @@ export default function Page() {
   useEffect(() => {
     fetchMetrics("cpu", "usage_active").then((data) => setCpuChartData(data));
     fetchMetrics("mem", "used_percent").then((data) => setMemoryChartData(data));
+    fetchMetrics("disk", "used_percent").then((data) => setDiskChartData(data));
   }, []);
+
+  const lastCpuData = cpuChartData[cpuChartData.length - 1] || { value: "0" };
+  const lastMemoryData = memoryChartData[memoryChartData.length - 1] || { value: "0" };
+  const lastDiskData = diskChartData[diskChartData.length - 1] || { value: "0" };
 
   const config = {
     cpu: { label: "CPU", color: "var(--primary)" },
@@ -45,7 +49,11 @@ export default function Page() {
         <div className="flex flex-1 flex-col">
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <SectionCards />
+              <SectionCards
+                cpuUsage={Math.round(parseFloat(lastCpuData.value))}
+                memoryUsage={Math.round(parseFloat(lastMemoryData.value))}
+                diskUsage={Math.round(parseFloat(lastDiskData.value))}
+              />
               <div className="px-4 lg:px-6">
                 <ChartAreaInteractive
                   chartData={cpuChartData}
@@ -58,7 +66,7 @@ export default function Page() {
                   resourceKey="memory"
                 />
                 <ChartAreaInteractive
-                  chartData={cpuChartData}
+                  chartData={diskChartData}
                   chartConfig={config}
                   resourceKey="disk"
                 />

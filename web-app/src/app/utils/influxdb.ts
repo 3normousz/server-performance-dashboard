@@ -11,13 +11,16 @@ if (!url || !token || !org || !bucket) {
 
 const queryApi = new InfluxDB({ url, token }).getQueryApi(org);
 
-export async function queryInfluxDB(measurement: string, field: string, range: string = "-5m") {
-    
+export async function queryInfluxDB(measurement: string, field: string, range: string = "-1h") {
+  const cpuFilter = measurement === "cpu" ? '|> filter(fn: (r) => r.cpu == "cpu-total")' : "";
+  const diskFilter = measurement === "disk" ? '|> filter(fn: (r) => r.device == "C:")' : "";
+  
   const fluxQuery = `
     from(bucket: "${bucket}")
       |> range(start: ${range})
       |> filter(fn: (r) => r._measurement == "${measurement}")
       |> filter(fn: (r) => r._field == "${field}")
+      ${cpuFilter}
       |> aggregateWindow(every: 1m, fn: mean)
       |> yield(name: "mean")
   `;

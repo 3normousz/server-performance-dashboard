@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Area, AreaChart, CartesianGrid, XAxis } from "recharts";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
 import { useIsMobile } from "../hooks/use-mobile";
 import {
@@ -38,15 +38,16 @@ export function ChartAreaInteractive({
   resourceKey,
 }: ChartAreaInteractiveProps) {
   const isMobile = useIsMobile();
-  const [timeRange, setTimeRange] = React.useState("30d");
+  const [timeRange, setTimeRange] = React.useState("5m");
+  const [drive, setDrive] = React.useState("C:");
 
   React.useEffect(() => {
     if (isMobile) {
-      setTimeRange("7d");
+      setTimeRange("5m");
     }
   }, [isMobile]);
 
-  const filteredData = chartData.filter((item) => {
+  /*const filteredData = chartData.filter((item) => {
     const date = new Date(item.date);
     const referenceDate = new Date("2024-06-30");
     let daysToSubtract = 30;
@@ -58,17 +59,50 @@ export function ChartAreaInteractive({
     const startDate = new Date(referenceDate);
     startDate.setDate(startDate.getDate() - daysToSubtract);
     return date >= startDate;
-  });
+  });*/
 
-  const mappedData = chartData.map((item) => ({
+  console.log("ORG Chart Data: ", chartData);
+  
+  const filteredData = React.useMemo(() => {
+    const now = new Date();
+    const rangeInMinutes = timeRange === "5m" ? 5 : 60;
+    const startTime = new Date(now.getTime() - rangeInMinutes * 60 * 1000);
+  
+    return chartData
+      .filter((item) => new Date(item.date) >= startTime)
+      .map((item) => ({
+        date: item.date,
+        value: item.value,
+        // Preserve the device information if it exists
+        device: item.device,
+        // Preserve other fields you might need
+        _field: item._field,
+        _measurement: item._measurement,
+      }));
+  }, [chartData, timeRange]);
+
+  const mappedData = filteredData.map((item) => ({
     date: item.date,
     [resourceKey]: item.value,
   }));
+
+  const mappedDataWithDrive = chartData
+    .filter((item) => item.device === drive)
+    .map((item) => ({
+      date: item.date,
+      [resourceKey]: item.value,
+    }));
+
+  console.log("Data for ", resourceKey);
+  console.log("Chart Data: ", chartData);
+  console.log("Filtered Data:", filteredData);
+  console.log("Mapped Data with Drive:", mappedDataWithDrive);
 
   return (
     <Card className="@container/card">
       <CardHeader>
         <CardTitle>{chartConfig[resourceKey].label} Resource Usage</CardTitle>
+        { ( resourceKey === "cpu" || resourceKey === "memory" ) && (
         <CardAction>
           <ToggleGroup
             type="single"
@@ -77,8 +111,8 @@ export function ChartAreaInteractive({
             variant="outline"
             className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex"
           >
-            <ToggleGroupItem value="30d">Last 30 days</ToggleGroupItem>
-            <ToggleGroupItem value="7d">Last 7 days</ToggleGroupItem>
+            <ToggleGroupItem value="5m">Last 5 minutes</ToggleGroupItem>
+            <ToggleGroupItem value="1h">Last 1 hour</ToggleGroupItem>
           </ToggleGroup>
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger
@@ -89,22 +123,58 @@ export function ChartAreaInteractive({
               <SelectValue placeholder="Last 7 days" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
-              <SelectItem value="30d" className="rounded-lg">
-                Last 30 days
+              <SelectItem value="5m" className="rounded-lg">
+                Last 5 minutes
               </SelectItem>
-              <SelectItem value="7d" className="rounded-lg">
-                Last 7 days
+              <SelectItem value="1h" className="rounded-lg">
+                Last 1 hour
               </SelectItem>
             </SelectContent>
           </Select>
         </CardAction>
+        )}
+        {  resourceKey === "disk"  && (
+        <CardAction>
+          <ToggleGroup
+            type="single"
+            value={drive}
+            onValueChange={(v) => v && setDrive(v)}
+            variant="outline"
+            className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex"
+          >
+            <ToggleGroupItem value="C:">C:</ToggleGroupItem>
+            <ToggleGroupItem value="D:">D:</ToggleGroupItem>
+            <ToggleGroupItem value="E:">E:</ToggleGroupItem>
+          </ToggleGroup>
+          <Select value={drive} onValueChange={setDrive}>
+            <SelectTrigger
+              className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
+              size="sm"
+              aria-label="Select a time range"
+            >
+              <SelectValue placeholder="Last 7 days" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="C:" className="rounded-lg">
+                C:
+              </SelectItem>
+              <SelectItem value="D:" className="rounded-lg">
+                D:
+              </SelectItem>
+              <SelectItem value="E:" className="rounded-lg">
+                E:
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </CardAction>
+        )}
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         <ChartContainer
           config={chartConfig}
           className="aspect-auto h-[250px] w-full"
         >
-          <AreaChart data={mappedData}>
+          <AreaChart data={resourceKey === "disk" ? mappedDataWithDrive : mappedData}>
             <defs>
               {Object.keys(chartConfig).map((key) => (
                 <linearGradient
@@ -141,12 +211,19 @@ export function ChartAreaInteractive({
                   minute: "2-digit",
                   second: "2-digit",
                 });
-              }}
-            />
-            <ChartTooltip
-              cursor={false}
-              defaultIndex={isMobile ? -1 : 3}
-              content={
+                }}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickMargin={8}
+                domain={[0, 100]}
+                tickFormatter={(value) => `${value}%`}
+              />
+              <ChartTooltip
+                cursor={false}
+                defaultIndex={isMobile ? -1 : 3}
+                content={
                 <ChartTooltipContent
                   labelFormatter={(value) => {
                     return new Date(value).toLocaleDateString("en-US", {
