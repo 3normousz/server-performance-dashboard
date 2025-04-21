@@ -16,18 +16,40 @@ export default function Page() {
 
   const [cpuChartData, setCpuChartData] = useState<ChartDataPoint[]>([]);
   const [memoryChartData, setMemoryChartData] = useState<ChartDataPoint[]>([]);
+  const [usedMemoryCardData, setUsedMemoryCardData] = useState<ChartDataPoint[]>([]);
+  const [totalMemoryCardData, setTotalMemoryCardData] = useState<ChartDataPoint[]>([]);
   const [diskChartData, setDiskChartData] = useState<ChartDataPoint[]>([]);
   
+  const fetchAll = async () => {
+    const cpu = await fetchMetrics(`100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle", instance="45.91.133.137:9100"}[30s])))`);
+    const mem = await fetchMetrics(`(1 - (node_memory_MemAvailable_bytes{instance="45.91.133.137:9100", job="linux"} / node_memory_MemTotal_bytes{instance="45.91.133.137:9100", job="linux"})) * 100`);
+    const totalMem = await fetchMetrics(`node_memory_MemTotal_bytes`);
+    const disk = await fetchMetrics(`node_filesystem_avail_bytes{mountpoint="/"}`);
+  
+    setCpuChartData(cpu);
+    setMemoryChartData(mem);
+    setUsedMemoryCardData(mem);
+    setTotalMemoryCardData(totalMem);
+    setDiskChartData(disk);
+  };
+  
   useEffect(() => {
-    fetchMetrics("cpu", "usage_active").then((data) => setCpuChartData(data));
-    fetchMetrics("mem", "used_percent").then((data) => setMemoryChartData(data));
-    fetchMetrics("disk", "used_percent").then((data) => setDiskChartData(data));
+
+    fetchAll();
+  
+    const interval = setInterval(() => {
+      fetchAll();
+    }, 30000);
+  
+    return () => clearInterval(interval);
   }, []);
+  
+  console.log("CPU Chart Data:", cpuChartData);
+  console.log("Memory Chart Data:", memoryChartData);
 
-  const lastCpuData = cpuChartData[cpuChartData.length - 1] || { value: "0" };
-  const lastMemoryData = memoryChartData[memoryChartData.length - 1] || { value: "0" };
-  const lastDiskData = diskChartData[diskChartData.length - 1] || { value: "0" };
-
+  const cpuData = cpuChartData[0] ? Math.round(cpuChartData[0].value * 100) / 100 : 0;
+  const memoryData = memoryChartData[0] ? Math.round(memoryChartData[0].value * 100) / 100 : 0;
+  
   const config = {
     cpu: { label: "CPU", color: "var(--primary)" },
     memory: { label: "Memory", color: "var(--primary)" },
@@ -50,26 +72,31 @@ export default function Page() {
           <div className="@container/main flex flex-1 flex-col gap-2">
             <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
               <SectionCards
-                cpuUsage={Math.round(parseFloat(lastCpuData.value))}
-                memoryUsage={Math.round(parseFloat(lastMemoryData.value))}
-                diskUsage={Math.round(parseFloat(lastDiskData.value))}
+                cpuUsage={cpuData}
+                memoryUsage={memoryData}
+                totalMemory={cpuData}
+                diskUsage={cpuData}
               />
               <div className="px-4 lg:px-6">
-                <ChartAreaInteractive
-                  chartData={cpuChartData}
-                  chartConfig={config}
-                  resourceKey="cpu"
-                />
-                <ChartAreaInteractive
-                  chartData={memoryChartData}
-                  chartConfig={config}
-                  resourceKey="memory"
-                />
-                <ChartAreaInteractive
-                  chartData={diskChartData}
-                  chartConfig={config}
-                  resourceKey="disk"
-                />
+                <div className="mb-4">
+                  <ChartAreaInteractive
+                    chartData={cpuChartData}
+                    chartConfig={config}
+                    resourceKey="cpu"
+                  />
+                </div>
+                <div className="mb-4">
+                  <ChartAreaInteractive
+                    chartData={memoryChartData}
+                    chartConfig={config}
+                    resourceKey="memory"
+                  />
+                </div>
+                  <ChartAreaInteractive
+                    chartData={diskChartData}
+                    chartConfig={config}
+                    resourceKey="disk"
+                  />
               </div>
               <DataTable data={data} />
             </div>

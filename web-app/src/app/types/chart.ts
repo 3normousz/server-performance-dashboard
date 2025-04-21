@@ -1,7 +1,6 @@
 export type ChartDataPoint = {
-  date: string;
+  timestamp: string;
   value: number;
-  device?: string;
   [key: string]: number | string | undefined;
 };
 

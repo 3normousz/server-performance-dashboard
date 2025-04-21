@@ -49,6 +49,26 @@ services:
       - influxdb
     restart: unless-stopped
 
+  # TESTING
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - "./monitoring-stack/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+    #networks:
+    #  - localprom
+    ports:
+      - 9090:9090
+  grafana:
+    image: grafana/grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    
+networks:
+  localprom:
+    driver: bridge
+
 secrets:
   influxdb2-admin-username:
     file: ~/.env.influxdb2-admin-username
@@ -60,3 +80,4 @@ secrets:
 volumes:
   influxdb2-data:
   influxdb2-config:
+  grafana_data:

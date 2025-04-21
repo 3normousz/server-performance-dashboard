@@ -13,10 +13,11 @@ import {
 interface SectionCardsProps {
   cpuUsage: number;
   memoryUsage: number;
+  totalMemory: number;
   diskUsage: number;
 }
 
-export function SectionCards({ cpuUsage, memoryUsage, diskUsage }: SectionCardsProps) {
+export function SectionCards({ cpuUsage, memoryUsage, totalMemory, diskUsage }: SectionCardsProps) {
   return (
     <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 px-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs lg:px-6 @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
       {/* CPU Usage */}
@@ -91,26 +92,20 @@ export function SectionCards({ cpuUsage, memoryUsage, diskUsage }: SectionCardsP
         </CardFooter>
       </Card>
 
-      {/* Network Usage */}
+      {/* Current Date and Time */}
       <Card className="@container/card">
         <CardHeader>
-          <CardDescription>Network Usage</CardDescription>
+          <CardDescription>Current Date and Time</CardDescription>
           <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-            100 Mbps
+        {new Date().toLocaleString()}
           </CardTitle>
-          <CardAction>
-            <Badge variant="outline">
-              <IconTrendingUp />
-              +10%
-            </Badge>
-          </CardAction>
         </CardHeader>
         <CardFooter className="flex-col items-start gap-1.5 text-sm">
           <div className="line-clamp-1 flex gap-2 font-medium">
-            Increased traffic <IconTrendingUp className="size-4" />
+        Displaying Local Time
           </div>
           <div className="text-muted-foreground">
-            Throughput nearing capacity
+        Updated in real-time
           </div>
         </CardFooter>
       </Card>

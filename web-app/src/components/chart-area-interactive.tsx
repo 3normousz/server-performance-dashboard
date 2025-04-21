@@ -61,7 +61,7 @@ export function ChartAreaInteractive({
     return date >= startDate;
   });*/
 
-  console.log("ORG Chart Data: ", chartData);
+  //console.log("ORG Chart Data: ", chartData);
   
   const filteredData = React.useMemo(() => {
     const now = new Date();
@@ -69,15 +69,11 @@ export function ChartAreaInteractive({
     const startTime = new Date(now.getTime() - rangeInMinutes * 60 * 1000);
   
     return chartData
-      .filter((item) => new Date(item.date) >= startTime)
+      .filter((item) => new Date(item.timestamp) >= startTime)
       .map((item) => ({
         date: item.date,
         value: item.value,
-        // Preserve the device information if it exists
         device: item.device,
-        // Preserve other fields you might need
-        _field: item._field,
-        _measurement: item._measurement,
       }));
   }, [chartData, timeRange]);
 
@@ -93,10 +89,10 @@ export function ChartAreaInteractive({
       [resourceKey]: item.value,
     }));
 
-  console.log("Data for ", resourceKey);
-  console.log("Chart Data: ", chartData);
-  console.log("Filtered Data:", filteredData);
-  console.log("Mapped Data with Drive:", mappedDataWithDrive);
+  //console.log("Data for ", resourceKey);
+  //console.log("Chart Data: ", chartData);
+  //console.log("Filtered Data:", filteredData);
+  //console.log("Mapped Data with Drive:", mappedDataWithDrive);
 
   return (
     <Card className="@container/card">
