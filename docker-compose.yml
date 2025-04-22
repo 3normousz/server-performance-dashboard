@@ -49,11 +49,11 @@ services:
       - influxdb
     restart: unless-stopped
 
-  # TESTING
   prometheus:
     image: prom/prometheus
     volumes:
       - "./monitoring-stack/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml"
+      - "./monitoring-stack/prometheus/targets.json:/etc/prometheus/targets.json"
     #networks:
     #  - localprom
     ports:

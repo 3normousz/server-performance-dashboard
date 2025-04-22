@@ -39,66 +39,48 @@ export function ChartAreaInteractive({
 }: ChartAreaInteractiveProps) {
   const isMobile = useIsMobile();
   const [timeRange, setTimeRange] = React.useState("5m");
-  const [drive, setDrive] = React.useState("C:");
 
   React.useEffect(() => {
     if (isMobile) {
       setTimeRange("5m");
     }
   }, [isMobile]);
-
-  /*const filteredData = chartData.filter((item) => {
-    const date = new Date(item.date);
-    const referenceDate = new Date("2024-06-30");
-    let daysToSubtract = 30;
-    if (timeRange === "30d") {
-      daysToSubtract = 30;
-    } else if (timeRange === "7d") {
-      daysToSubtract = 7;
-    }
-    const startDate = new Date(referenceDate);
-    startDate.setDate(startDate.getDate() - daysToSubtract);
-    return date >= startDate;
-  });*/
-
-  //console.log("ORG Chart Data: ", chartData);
   
+  // console.log("Chart Data:", chartData);
+
   const filteredData = React.useMemo(() => {
     const now = new Date();
     const rangeInMinutes = timeRange === "5m" ? 5 : 60;
     const startTime = new Date(now.getTime() - rangeInMinutes * 60 * 1000);
+
+    const isDiskChart = Object.keys(chartConfig).some((key) =>
+      ["/", "/boot", "/boot/efi", "/run", "/run/lock", "/run/user/0"].includes(key)
+    );
+
+    const isCPUChart = Object.keys(chartConfig).some((key) =>
+      ["idle", "iowait", "irq", "nice", "softirq", "steal", "system", "user"].includes(key)
+    );
   
     return chartData
       .filter((item) => new Date(item.timestamp) >= startTime)
-      .map((item) => ({
-        date: item.date,
-        value: item.value,
-        device: item.device,
-      }));
-  }, [chartData, timeRange]);
+      .map((item) => {
+        if (isDiskChart || isCPUChart) {
+          return item;
+        } else {
+          return {
+            timestamp: item.timestamp,
+            [resourceKey]: item.value,
+          };
+        }
+      });
+  }, [chartData, timeRange, resourceKey]);  
 
-  const mappedData = filteredData.map((item) => ({
-    date: item.date,
-    [resourceKey]: item.value,
-  }));
-
-  const mappedDataWithDrive = chartData
-    .filter((item) => item.device === drive)
-    .map((item) => ({
-      date: item.date,
-      [resourceKey]: item.value,
-    }));
-
-  //console.log("Data for ", resourceKey);
-  //console.log("Chart Data: ", chartData);
-  //console.log("Filtered Data:", filteredData);
-  //console.log("Mapped Data with Drive:", mappedDataWithDrive);
+  // console.log("Filtered Data:", filteredData);
 
   return (
     <Card className="@container/card">
       <CardHeader>
         <CardTitle>{chartConfig[resourceKey].label} Resource Usage</CardTitle>
-        { ( resourceKey === "cpu" || resourceKey === "memory" ) && (
         <CardAction>
           <ToggleGroup
             type="single"
@@ -128,49 +110,13 @@ export function ChartAreaInteractive({
             </SelectContent>
           </Select>
         </CardAction>
-        )}
-        {  resourceKey === "disk"  && (
-        <CardAction>
-          <ToggleGroup
-            type="single"
-            value={drive}
-            onValueChange={(v) => v && setDrive(v)}
-            variant="outline"
-            className="hidden *:data-[slot=toggle-group-item]:!px-4 @[767px]/card:flex"
-          >
-            <ToggleGroupItem value="C:">C:</ToggleGroupItem>
-            <ToggleGroupItem value="D:">D:</ToggleGroupItem>
-            <ToggleGroupItem value="E:">E:</ToggleGroupItem>
-          </ToggleGroup>
-          <Select value={drive} onValueChange={setDrive}>
-            <SelectTrigger
-              className="flex w-40 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate @[767px]/card:hidden"
-              size="sm"
-              aria-label="Select a time range"
-            >
-              <SelectValue placeholder="Last 7 days" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="C:" className="rounded-lg">
-                C:
-              </SelectItem>
-              <SelectItem value="D:" className="rounded-lg">
-                D:
-              </SelectItem>
-              <SelectItem value="E:" className="rounded-lg">
-                E:
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </CardAction>
-        )}
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         <ChartContainer
           config={chartConfig}
           className="aspect-auto h-[250px] w-full"
         >
-          <AreaChart data={resourceKey === "disk" ? mappedDataWithDrive : mappedData}>
+          <AreaChart data={filteredData}>
             <defs>
               {Object.keys(chartConfig).map((key) => (
                 <linearGradient
@@ -196,7 +142,7 @@ export function ChartAreaInteractive({
             </defs>
             <CartesianGrid vertical={false} />
             <XAxis
-              dataKey="date"
+              dataKey="timestamp"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
@@ -238,7 +184,7 @@ export function ChartAreaInteractive({
               <Area
                 key={key}
                 dataKey={key}
-                stackId="server"
+                // stackId="server"
                 type="monotone"
                 fill={`url(#fill${key})`}
                 stroke={chartConfig[key].color}

@@ -21,10 +21,12 @@ export default function Page() {
   const [diskChartData, setDiskChartData] = useState<ChartDataPoint[]>([]);
   
   const fetchAll = async () => {
-    const cpu = await fetchMetrics(`100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle", instance="45.91.133.137:9100"}[30s])))`);
+    //const cpu = await fetchMetrics(`100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle", instance="45.91.133.137:9100"}[30s])))`);
+    const cpu = await fetchMetrics(`sum by (mode)(irate(node_cpu_seconds_total{instance="45.91.133.137:9100", job="linux"}[15s]))
+        / scalar(count(count(node_cpu_seconds_total{instance="45.91.133.137:9100", job="linux"}) by (cpu)))* 100`);
     const mem = await fetchMetrics(`(1 - (node_memory_MemAvailable_bytes{instance="45.91.133.137:9100", job="linux"} / node_memory_MemTotal_bytes{instance="45.91.133.137:9100", job="linux"})) * 100`);
-    const totalMem = await fetchMetrics(`node_memory_MemTotal_bytes`);
-    const disk = await fetchMetrics(`node_filesystem_avail_bytes{mountpoint="/"}`);
+    const totalMem = await fetchMetrics(`node_memory_MemTotal_bytes{instance="45.91.133.137:9100",job="linux"}`);
+    const disk = await fetchMetrics(`100 - ((node_filesystem_avail_bytes{instance="45.91.133.137:9100",job="linux",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance="45.91.133.137:9100",job="linux",device!~'rootfs'})`);
   
     setCpuChartData(cpu);
     setMemoryChartData(mem);
@@ -44,12 +46,42 @@ export default function Page() {
     return () => clearInterval(interval);
   }, []);
   
-  console.log("CPU Chart Data:", cpuChartData);
-  console.log("Memory Chart Data:", memoryChartData);
+  //console.log("CPU Chart Data:", cpuChartData);
+  //console.log("Memory Chart Data:", memoryChartData);
+  //console.log("Disk Chart Data:", diskChartData);
 
-  const cpuData = cpuChartData[0] ? Math.round(cpuChartData[0].value * 100) / 100 : 0;
-  const memoryData = memoryChartData[0] ? Math.round(memoryChartData[0].value * 100) / 100 : 0;
+  const cpuData = cpuChartData[0] ? Math.round(cpuChartData[0].value! * 100) / 100 : 0;
+  const memoryData = memoryChartData[0] ? Math.round(memoryChartData[0].value! * 100) / 100 : 0;
   
+  const groupedDiskByTimestamp = new Map<string, Record<string, any>>();
+  const groupedCPUByTimestamp = new Map<string, Record<string, any>>();
+
+  diskChartData.forEach(({ timestamp, value, mountpoint }) => {
+    if (!groupedDiskByTimestamp.has(timestamp)) {
+      groupedDiskByTimestamp.set(timestamp, { timestamp });
+    }
+    groupedDiskByTimestamp.get(timestamp)![mountpoint!] = value;
+  });
+
+  cpuChartData.forEach(({ timestamp, value, mode }) => {
+    if (!groupedCPUByTimestamp.has(timestamp)) {
+      groupedCPUByTimestamp.set(timestamp, { timestamp });
+    }
+    groupedCPUByTimestamp.get(timestamp)![mode!] = value;
+  });
+
+  const stackedDiskData: ChartDataPoint[] = Array.from(groupedDiskByTimestamp.values()).map((entry) => ({
+    timestamp: entry.timestamp as string,
+    ...entry,
+  }));
+
+  const stackedCPUData: ChartDataPoint[] = Array.from(groupedCPUByTimestamp.values()).map((entry) => ({
+    timestamp: entry.timestamp as string,
+    ...entry,
+  }));
+
+  // console.log("Stacked CPU Data:", stackedCPUData);
+
   const config = {
     cpu: { label: "CPU", color: "var(--primary)" },
     memory: { label: "Memory", color: "var(--primary)" },
@@ -80,9 +112,18 @@ export default function Page() {
               <div className="px-4 lg:px-6">
                 <div className="mb-4">
                   <ChartAreaInteractive
-                    chartData={cpuChartData}
-                    chartConfig={config}
-                    resourceKey="cpu"
+                    chartData={stackedCPUData}
+                    chartConfig={{
+                      "idle": { label: "Idle", color: "#82ca9d" },
+                      "iowait": { label: "Iowait", color: "#8884d8" },
+                      "irq": { label: "Irq", color: "#ffc658" },
+                      "nice": { label: "Nice", color: "#ff8042" },
+                      "softirq": { label: "Softirq", color: "#d0ed57" },
+                      "steal": { label: "Steal", color: "#a4de6c" },
+                      "system": { label: "System", color: "#3498db" },
+                      "user": { label: "User", color: "#e74c3c" },
+                    }}
+                    resourceKey="user"
                   />
                 </div>
                 <div className="mb-4">
@@ -93,9 +134,16 @@ export default function Page() {
                   />
                 </div>
                   <ChartAreaInteractive
-                    chartData={diskChartData}
-                    chartConfig={config}
-                    resourceKey="disk"
+                    chartData={stackedDiskData}
+                    chartConfig={{
+                      "/": { label: "/", color: "#82ca9d" },
+                      "/boot": { label: "/boot", color: "#8884d8" },
+                      "/boot/efi": { label: "/boot/efi", color: "#ffc658" },
+                      "/run": { label: "/run", color: "#ff8042" },
+                      "/run/lock": { label: "/run/lock", color: "#d0ed57" },
+                      "/run/user/0": { label: "/run/user/0", color: "#a4de6c" },
+                    }}
+                    resourceKey="/"
                   />
               </div>
               <DataTable data={data} />

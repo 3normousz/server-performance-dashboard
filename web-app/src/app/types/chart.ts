@@ -1,6 +1,6 @@
 export type ChartDataPoint = {
   timestamp: string;
-  value: number;
+  value?: number;
   [key: string]: number | string | undefined;
 };
 

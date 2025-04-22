@@ -43,3 +43,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# prometheus targets
+/monitoring-stack/prometheus/targets.json
