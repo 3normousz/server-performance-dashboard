@@ -1,4 +1,4 @@
-import Page from "./dashboard/page";
+import Page from "./(auth-pages)/login/page";
 
 export default function Home() {
   return <Page />;
