@@ -1,6 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useEffect, useState } from "react";
+import { Server } from "@/app/types/server";
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   IconCamera,
   IconChartBar,
@@ -19,7 +22,7 @@ import {
   IconUsers,
 } from "@tabler/icons-react";
 
-import { NavDocuments } from "./nav-documents";
+import { NavServerLists } from "./nav-server-lists";
 import { NavMain } from "./nav-main";
 import { NavSecondary } from "./nav-secondary";
 import { NavUser } from "./nav-user";
@@ -37,7 +40,7 @@ const data = {
   user: {
     name: "shadcn",
     email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
+    avatar: "",
   },
   navMain: [
     {
@@ -66,91 +69,30 @@ const data = {
       icon: IconUsers,
     },
   ],
-  navClouds: [
-    {
-      title: "Capture",
-      icon: IconCamera,
-      isActive: true,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Proposal",
-      icon: IconFileDescription,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-    {
-      title: "Prompts",
-      icon: IconFileAi,
-      url: "#",
-      items: [
-        {
-          title: "Active Proposals",
-          url: "#",
-        },
-        {
-          title: "Archived",
-          url: "#",
-        },
-      ],
-    },
-  ],
-  navSecondary: [
-    {
-      title: "Settings",
-      url: "#",
-      icon: IconSettings,
-    },
-    {
-      title: "Get Help",
-      url: "#",
-      icon: IconHelp,
-    },
-    {
-      title: "Search",
-      url: "#",
-      icon: IconSearch,
-    },
-  ],
-  documents: [
-    {
-      name: "Server 1",
-      url: "#",
-      icon: IconDatabase,
-    },
-    {
-      name: "Reports",
-      url: "#",
-      icon: IconReport,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: IconFileWord,
-    },
-  ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [serverLists, setServerLists] = useState<Server[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchServers = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch('/api/users/server-lists');
+        if (!response.ok) throw new Error('Failed to fetch servers');
+        const data = await response.json();
+        setServerLists(data);
+      } catch (error) {
+        console.error('Error fetching servers:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchServers();
+  }, []);
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -170,8 +112,24 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        <NavDocuments items={data.documents} />
-        <NavSecondary items={data.navSecondary} className="mt-auto" />
+        {loading ? (
+          <div className="space-y-2 p-4">
+            <Skeleton className="h-4 w-[100px]" />
+            <div className="space-y-2 mt-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          </div>
+        ) : (
+          <NavServerLists 
+            items={serverLists.map(server => ({
+              name: server.name,
+              url: `/dashboard/${server.id}`,
+              icon: IconDatabase,
+            }))} 
+          />
+        )}
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={data.user} />

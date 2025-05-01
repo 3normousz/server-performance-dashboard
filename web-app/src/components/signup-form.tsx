@@ -31,8 +31,14 @@ export function SignUpForm({
     e.preventDefault()
     setLoading(true)
 
+    if (password !== confirmationPassword) {
+      alert("Passwords do not match")
+      setLoading(false)
+      return
+    }
+
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signUp({
         email,
         password,
       })
@@ -43,7 +49,6 @@ export function SignUpForm({
       router.refresh()
     } catch (error) {
       console.error("Error:", error)
-      // You might want to add a toast notification here
     } finally {
       setLoading(false)
     }
@@ -91,7 +96,7 @@ export function SignUpForm({
                   <Input 
                     id="confirm-password" 
                     type="password"
-                    value={password}
+                    value={confirmationPassword}
                     onChange={(e) => setConfirmationPassword(e.target.value)}
                     required
                     disabled={loading}

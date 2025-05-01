@@ -42,7 +42,6 @@ export function LoginForm({
       router.refresh()
     } catch (error) {
       console.error("Error:", error)
-      // You might want to add a toast notification here
     } finally {
       setLoading(false)
     }
