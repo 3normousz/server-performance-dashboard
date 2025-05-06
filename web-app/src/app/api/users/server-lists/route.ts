@@ -1,9 +1,12 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { fetchServerMetrics, determineHealthStatus } from '@/app/utils/fetchServerMetrics'
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = createRouteHandlerClient({ cookies })
+  const { searchParams } = new URL(request.url)
+  const includeHealth = searchParams.get('include_health') === 'true'
   
   try {
     const { data, error } = await supabase
@@ -12,6 +15,25 @@ export async function GET() {
       .order('created_at', { ascending: false })
 
     if (error) throw error
+
+    if (includeHealth) {
+      const serversWithHealth = await Promise.all(
+        data.map(async (server) => {
+          const metrics = await fetchServerMetrics(server.address)
+          return {
+            ...server,
+            health: {
+              cpu: metrics.cpu,
+              memory: metrics.memory,
+              disk: metrics.disk,
+              status: determineHealthStatus(metrics)
+            }
+          }
+        })
+      )
+      return NextResponse.json(serversWithHealth)
+    }
+    
     return NextResponse.json(data)
   } catch (error) {
     return NextResponse.json(
